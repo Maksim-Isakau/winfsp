@@ -305,8 +305,13 @@ static NTSTATUS FspFsvolWriteCached(
         }
     }
 
-    /* should we defer the write? */
-    Success = DEBUGTEST(90) && CcCanIWrite(FileObject, WriteLength, CanWait, Retrying);
+    /* should we defer the write?
+     * 
+     * do not wait while holding exclusive lock on FileNode, if all dirty pages belong to this 
+     * file there is no way to flush them via FspFsvolWriteNonCached, the call will
+     * hang on lock acquisition
+     */
+    Success = DEBUGTEST(90) && CcCanIWrite(FileObject, WriteLength, FALSE, Retrying);
     if (!Success)
     {
         Result = FspWqCreateIrpWorkItem(Irp, FspFsvolWriteCached, 0);
