@@ -1111,6 +1111,58 @@ void rdwr_mixed_test(void)
     }
 }
 
+static void rdwr_copy_large_file_dotest(PWSTR Prefix)
+{
+    HANDLE Handle;
+    WCHAR Source[MAX_PATH], Dest[MAX_PATH], TempPath[MAX_PATH];
+    LARGE_INTEGER FileSize;
+    BOOL Success;
+
+    Success = 0 != GetTempPathW(MAX_PATH, TempPath);
+    ASSERT(Success);
+    StringCbPrintfW(Source, sizeof Source, L"%swinfsp_rdwr_copy_large_file_test_src.bin", TempPath);
+    StringCbPrintfW(Dest, sizeof Dest, L"%s\\winfsp_rdwr_copy_large_file_test_dst.bin", Prefix);
+
+    Handle = CreateFileW(Source,
+        GENERIC_WRITE, FILE_SHARE_READ, 0, CREATE_NEW, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE, 0);
+    ASSERT(INVALID_HANDLE_VALUE != Handle);
+    
+    FileSize.QuadPart = 5LL * 1024 * 1024 * 1024;
+    Success = SetFilePointerEx(Handle, FileSize, 0, FILE_BEGIN);
+    ASSERT(Success);
+    
+    Success = SetEndOfFile(Handle);
+    ASSERT(Success);
+    
+    Success = CopyFileW(Source, Dest, FALSE);
+    if (Success)
+    {
+        Success = DeleteFileW(Dest);
+        ASSERT(Success);
+    }
+    else
+    {
+        /* out of space: likely memfs */
+        ASSERT(ERROR_DISK_FULL == GetLastError());
+        DeleteFileW(Dest);
+    }
+
+    Success = CloseHandle(Handle);
+    ASSERT(Success);
+}
+
+void rdwr_copy_large_file_test(void)
+{
+    WCHAR DirBuf[MAX_PATH], DriveBuf[3];
+
+    /* memfs would exhaust RAM */
+    if (!OptExternal)
+        return;
+
+    GetTestDirectoryAndDrive(DirBuf, DriveBuf);
+    rdwr_copy_large_file_dotest(DirBuf);
+}
+
 void rdwr_tests(void)
 {
     TEST(rdwr_noncached_test);
@@ -1130,4 +1182,6 @@ void rdwr_tests(void)
     TEST(rdwr_writethru_overlapped_test);
     TEST(rdwr_mmap_test);
     TEST(rdwr_mixed_test);
+    /* Uncomment to run it by hand - against ntptfs */
+    //TEST_OPT(rdwr_copy_large_file_test);
 }
