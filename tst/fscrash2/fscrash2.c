@@ -10,7 +10,7 @@
         (fail("ASSERT(%s) failed at %s:%d:%s (LastError=%lu)\n", #expr, __FILE__, __LINE__, __func__, GetLastError()), exit(1)) :\
         (void)0)
 
-#define FSCRASH2_LOAD_THREADS           8
+#define FSCRASH2_LOAD_THREADS           4
 #define FSCRASH2_EXIT_TIMEOUT           10000
 
 ULONG OptIterations = 20;
@@ -38,7 +38,7 @@ static int RunFs(PWSTR Id)
         exit(1);
     }
 
-    Result = MemfsStart(Memfs);
+    Result = FspFileSystemStartDispatcher(MemfsFileSystem(Memfs), 16);
     if (!NT_SUCCESS(Result))
     {
         fail("cannot start MEMFS file system: (Status=%lx)", Result);
